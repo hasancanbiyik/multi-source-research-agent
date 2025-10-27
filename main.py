@@ -16,7 +16,7 @@ from prompts import (
 
 load_dotenv()
 
-llm = init_chat_model("gpt-4o")
+llm = init_chat_model("gpt-3.5-turbo")
 
 
 class State(TypedDict):
@@ -37,23 +37,15 @@ class RedditURLAnalysis(BaseModel):
     selected_urls: List[str] = Field(description="List of Reddit URLs that contain valuable information for answering the user's question")
 
 
-def google_search(state: State):
+def google_search(state: dict):
     user_question = state.get("user_question", "")
-    print(f"Searching Google for: {user_question}")
+    print(f"[SKIP] Google search disabled (BrightData).")
+    return {"google_results": ""}
 
-    google_results = serp_search(user_question, engine="google")
-
-    return {"google_results": google_results}
-
-
-def bing_search(state: State):
+def bing_search(state: dict):
     user_question = state.get("user_question", "")
-    print(f"Searching Bing for: {user_question}")
-
-    bing_results = serp_search(user_question, engine="bing")
-
-    return {"bing_results": bing_results}
-
+    print(f"[SKIP] Bing search disabled (BrightData).")
+    return {"bing_results": ""}
 
 def reddit_search(state: State):
     user_question = state.get("user_question", "")
