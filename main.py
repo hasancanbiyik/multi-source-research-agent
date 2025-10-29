@@ -5,6 +5,7 @@ from langgraph.graph.message import add_messages
 from langchain.chat_models import init_chat_model
 from typing_extensions import TypedDict
 from pydantic import BaseModel, Field
+from vector_store import init_vector_db, add_texts, query as vector_query
 from web_operations import serp_search, reddit_search_api, reddit_post_retrieval
 from prompts import (
     get_reddit_analysis_messages,
@@ -17,6 +18,7 @@ from prompts import (
 load_dotenv()
 
 llm = init_chat_model("gpt-3.5-turbo")
+collection = init_vector_db()
 
 
 class State(TypedDict):
@@ -54,8 +56,29 @@ def reddit_search(state: State):
     reddit_results = reddit_search_api(keyword=user_question)
     print(reddit_results)
 
-    return {"reddit_results": reddit_results}
+    # --- NEW: index Reddit posts in Chroma for retrieval later ---
+    if reddit_results and reddit_results.get("parsed_posts"):
+        texts = []
+        metadatas = []
 
+        for post in reddit_results["parsed_posts"]:
+            title = post.get("title", "")
+            url = post.get("url", "")
+
+            # We'll store a simple "evidence line" for each post
+            evidence_text = f"[Reddit] {title} ({url})"
+            texts.append(evidence_text)
+
+            metadatas.append({
+                "source": "reddit",
+                "url": url,
+                "title": title,
+            })
+
+        # write to vector DB
+        add_texts(collection, texts, metadatas)
+
+    return {"reddit_results": reddit_results}
 
 def analyze_reddit_posts(state: State):
     user_question = state.get("user_question", "")
@@ -149,15 +172,36 @@ def synthesize_analyses(state: State):
     bing_analysis = state.get("bing_analysis", "")
     reddit_analysis = state.get("reddit_analysis", "")
 
+    # --- NEW: retrieve top semantic matches from vector DB ---
+    hits = vector_query(collection, user_question, k=3)
+
+    # Build a readable block of "evidence lines" from Chroma
+    retrieved_blocks = []
+    for h in hits:
+        src = h["metadata"].get("source", "unknown")
+        url = h["metadata"].get("url", "")
+        title = h["metadata"].get("title", "")
+        txt = h["text"]
+        retrieved_blocks.append(f"- {txt}\n  source={src} url={url} title={title}")
+
+    retrieved_context = "\n".join(retrieved_blocks)
+
+    # Ask the LLM to synthesize everything including retrieved context
     messages = get_synthesis_messages(
-        user_question, google_analysis, bing_analysis, reddit_analysis
+        user_question,
+        google_analysis,
+        bing_analysis,
+        reddit_analysis,
+        retrieved_context,
     )
 
     reply = llm.invoke(messages)
     final_answer = reply.content
 
-    return {"final_answer": final_answer, "messages": [{"role": "assistant", "content": final_answer}]}
-
+    return {
+        "final_answer": final_answer,
+        "messages": [{"role": "assistant", "content": final_answer}],
+    }
 
 graph_builder = StateGraph(State)
 
