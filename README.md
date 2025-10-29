@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Multi-Source Research Agent
 
 An AI research assistant that takes a natural language question, searches multiple public sources (web search, Reddit discussions), analyzes findings with an LLM, and returns a synthesized answer with reasoning.
@@ -248,4 +247,3 @@ The agent will:
 - Clean separation between retrieval layer, analysis layer, and orchestration layer.
 
 This is the type of architecture companies use for internal research assistants, competitive intelligence tools, and AI analyst copilots.
->>>>>>> 79bce52e86bd4c3e3e4c36138ba9826ae8001fc5
