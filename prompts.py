@@ -193,12 +193,37 @@ def get_reddit_analysis_messages(
 
 
 def get_synthesis_messages(
-    user_question: str, google_analysis: str, bing_analysis: str, reddit_analysis: str
-) -> list[Dict[str, Any]]:
-    """Get messages for final synthesis."""
-    return create_message_pair(
-        PromptTemplates.synthesis_system(),
-        PromptTemplates.synthesis_user(
-            user_question, google_analysis, bing_analysis, reddit_analysis
-        ),
+    user_question,
+    google_analysis,
+    bing_analysis,
+    reddit_analysis,
+    retrieved_context
+):
+    system_msg = (
+        "You are a research assistant. You combine web summaries, Reddit sentiment, "
+        "and retrieved context snippets to answer the user's question. "
+        "Use the retrieved_context as factual evidence where helpful."
     )
+
+    user_msg = f"""
+User question: {user_question}
+
+Web / Google analysis:
+{google_analysis}
+
+Bing / other web analysis:
+{bing_analysis}
+
+Reddit analysis:
+{reddit_analysis}
+
+Relevant retrieved context (evidence snippets from previous steps / memory):
+{retrieved_context}
+
+Now produce a concise, well-structured answer. 
+If there is disagreement between sources, explain it briefly.
+"""
+    return [
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": user_msg},
+    ]
