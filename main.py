@@ -192,6 +192,22 @@ graph_builder.add_edge("synthesize_analyses", END)
 
 graph = graph_builder.compile()
 
+def run_agent_question(user_input: str) -> dict:
+    state = {
+        "messages": [{"role": "user", "content": user_input}],
+        "user_question": user_input,
+        "google_results": None,
+        "bing_results": None,
+        "reddit_results": None,
+        "selected_reddit_urls": None,
+        "reddit_post_data": None,
+        "google_analysis": None,
+        "bing_analysis": None,
+        "reddit_analysis": None,
+        "final_answer": None,
+    }
+    final_state = graph.invoke(state)
+    return final_state
 
 def run_chatbot():
     print("Multi-Source Research Agent")
@@ -225,7 +241,6 @@ def run_chatbot():
             print(f"\nFinal Answer:\n{final_state.get('final_answer')}\n")
 
         print("-" * 80)
-
 
 if __name__ == "__main__":
     run_chatbot()

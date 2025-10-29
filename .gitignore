@@ -1,10 +1,17 @@
-# Python-generated files
+# Python
 __pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
+*.pyc
+.venv/
+env/
+venv/
 
-# Virtual environments
-.venv
+# Local config
+.env
+.env.*
+
+# OS junk
+.DS_Store
+
+# Caches
+*.log
+.cache/
