@@ -1,19 +1,16 @@
-# Python
+# Python cache/venv
 __pycache__/
 *.pyc
 .venv/
 env/
 venv/
 
-# Local config
+# Local environment secrets
 .env
-.env.*
 
-# OS junk
+# macOS junk
 .DS_Store
 
-# Caches
+# Logs/cache
 *.log
 .cache/
-.env
-.env
