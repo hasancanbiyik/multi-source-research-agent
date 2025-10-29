@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from main import graph
 import uvicorn
 import time
+from prometheus_fastapi_instrumentator import Instrumentator
 
 # ---------- Request / Response Models ----------
 
@@ -26,6 +27,9 @@ app = FastAPI(
     description="A FastAPI interface for the multi-source research agent built with LangGraph + LLMs.",
     version="1.0.0",
 )
+
+# expose Prometheus-compatible metrics at /metrics
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 # ---------- Routes ----------
 
