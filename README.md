@@ -2,6 +2,7 @@
 ### LLM-Powered Multi-Source Research Assistant with FastAPI, LangGraph, and ChromaDB
 
 A fully modular **multi-source research agent** that collects and synthesizes insights from **Google, Bing, and Reddit** — powered by **LangGraph** orchestration, **FastAPI** backend, **Streamlit** UI, and a **ChromaDB vector store** for local embedding search.
+**Based on a tutorial and foundational code provided by [Tech With Tim](https://www.youtube.com/watch?v=cUC-hyjpNxk)** (LLM-Powered Multi-Source Research Assistant with LangGraph, Python, Bright Data.)
 
 ---
 
@@ -16,7 +17,7 @@ A fully modular **multi-source research agent** that collects and synthesizes in
 
 ---
 
-## 🧩 Project Structure
+## Project Structure
 
 ```text
 multi-source-research-agent
@@ -119,3 +120,4 @@ Easily deployable on:
 🔗  [LinkedIn](https://www.linkedin.com/in/hasancanbyk)
 
 ---
+
