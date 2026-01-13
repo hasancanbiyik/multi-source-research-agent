@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  # The Backend API (FastAPI)
+  backend:
+    build: .
+    container_name: research-backend
+    command: uvicorn server:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - .:/app  # Syncs your local code edits to the container immediately
+
+  # The Frontend UI (Streamlit)
+  frontend:
+    build: .
+    container_name: research-frontend
+    command: streamlit run app.py --server.port 8501 --server.address 0.0.0.0
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    depends_on:
+      - backend
