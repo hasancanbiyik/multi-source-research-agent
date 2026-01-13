@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+streamlit
+python-dotenv
+langgraph
+langchain
+langchain-openai
+pydantic
+chromadb
+requests
+duckduckgo-search
+prometheus-fastapi-instrumentator
+openai
