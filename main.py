@@ -1,3 +1,4 @@
+# main.py (Fixed Version)
 from dotenv import load_dotenv
 from typing import Annotated, List
 from langgraph.graph import StateGraph, START, END
@@ -20,7 +21,6 @@ load_dotenv()
 llm = init_chat_model("gpt-3.5-turbo")
 collection = init_vector_db()
 
-
 class State(TypedDict):
     messages: Annotated[list, add_messages]
     user_question: str | None
@@ -34,29 +34,45 @@ class State(TypedDict):
     reddit_analysis: str | None
     final_answer: str | None
 
-
 class RedditURLAnalysis(BaseModel):
     selected_urls: List[str] = Field(description="List of Reddit URLs that contain valuable information for answering the user's question")
 
+# --- FIXED FUNCTIONS START HERE ---
 
 def google_search(state: dict):
     user_question = state.get("user_question", "")
-    print(f"[SKIP] Google search disabled (BrightData).")
-    return {"google_results": ""}
+    print(f"Searching Google (via DDG) for: {user_question}")
+    
+    # Use the imported serp_search function
+    results = serp_search(user_question, engine="google")
+    
+    # Format list of dicts into a readable string for the LLM
+    formatted_results = "\n".join(
+        [f"- [{r['title']}]({r['url']}): {r['snippet']}" for r in results]
+    )
+    return {"google_results": formatted_results}
 
 def bing_search(state: dict):
     user_question = state.get("user_question", "")
-    print(f"[SKIP] Bing search disabled (BrightData).")
-    return {"bing_results": ""}
+    print(f"Searching Bing (via DDG) for: {user_question}")
+    
+    # We use the same underlying search (DDG) but treat it as a secondary source
+    results = serp_search(user_question, engine="bing")
+    
+    formatted_results = "\n".join(
+        [f"- [{r['title']}]({r['url']}): {r['snippet']}" for r in results]
+    )
+    return {"bing_results": formatted_results}
+
+# --- FIXED FUNCTIONS END HERE ---
 
 def reddit_search(state: State):
     user_question = state.get("user_question", "")
     print(f"Searching Reddit for: {user_question}")
 
     reddit_results = reddit_search_api(keyword=user_question)
-    print(reddit_results)
-
-    # --- NEW: index Reddit posts in Chroma for retrieval later ---
+    
+    # Index Reddit posts in Chroma for retrieval later
     if reddit_results and reddit_results.get("parsed_posts"):
         texts = []
         metadatas = []
@@ -64,18 +80,15 @@ def reddit_search(state: State):
         for post in reddit_results["parsed_posts"]:
             title = post.get("title", "")
             url = post.get("url", "")
-
             # We'll store a simple "evidence line" for each post
             evidence_text = f"[Reddit] {title} ({url})"
             texts.append(evidence_text)
-
             metadatas.append({
                 "source": "reddit",
                 "url": url,
                 "title": title,
             })
 
-        # write to vector DB
         add_texts(collection, texts, metadatas)
 
     return {"reddit_results": reddit_results}
@@ -93,89 +106,76 @@ def analyze_reddit_posts(state: State):
     try:
         analysis = structured_llm.invoke(messages)
         selected_urls = analysis.selected_urls
-
         print("Selected URLs:")
         for i, url in enumerate(selected_urls, 1):
             print(f"   {i}. {url}")
-
     except Exception as e:
-        print(e)
+        print(f"Error parsing URLs: {e}")
         selected_urls = []
 
     return {"selected_reddit_urls": selected_urls}
 
-
 def retrieve_reddit_posts(state: State):
     print("Getting reddit post comments")
-
     selected_urls = state.get("selected_reddit_urls", [])
 
     if not selected_urls:
         return {"reddit_post_data": []}
 
     print(f"Processing {len(selected_urls)} Reddit URLs")
-
     reddit_post_data = reddit_post_retrieval(selected_urls)
-
+    
     if reddit_post_data:
         print(f"Successfully got {len(reddit_post_data)} posts")
     else:
         print("Failed to get post data")
         reddit_post_data = []
 
-    print(reddit_post_data)
     return {"reddit_post_data": reddit_post_data}
-
 
 def analyze_google_results(state: State):
     print("Analyzing google search results")
-
     user_question = state.get("user_question", "")
     google_results = state.get("google_results", "")
+    
+    if not google_results:
+        return {"google_analysis": "No Google results found."}
 
     messages = get_google_analysis_messages(user_question, google_results)
     reply = llm.invoke(messages)
-
     return {"google_analysis": reply.content}
-
 
 def analyze_bing_results(state: State):
     print("Analyzing bing search results")
-
     user_question = state.get("user_question", "")
     bing_results = state.get("bing_results", "")
+    
+    if not bing_results:
+        return {"bing_analysis": "No Bing results found."}
 
     messages = get_bing_analysis_messages(user_question, bing_results)
     reply = llm.invoke(messages)
-
     return {"bing_analysis": reply.content}
-
 
 def analyze_reddit_results(state: State):
     print("Analyzing reddit search results")
-
     user_question = state.get("user_question", "")
     reddit_results = state.get("reddit_results", "")
     reddit_post_data = state.get("reddit_post_data", "")
 
     messages = get_reddit_analysis_messages(user_question, reddit_results, reddit_post_data)
     reply = llm.invoke(messages)
-
     return {"reddit_analysis": reply.content}
-
 
 def synthesize_analyses(state: State):
     print("Combine all results together")
-
     user_question = state.get("user_question", "")
     google_analysis = state.get("google_analysis", "")
     bing_analysis = state.get("bing_analysis", "")
     reddit_analysis = state.get("reddit_analysis", "")
 
-    # --- NEW: retrieve top semantic matches from vector DB ---
     hits = vector_query(collection, user_question, k=3)
 
-    # Build a readable block of "evidence lines" from Chroma
     retrieved_blocks = []
     for h in hits:
         src = h["metadata"].get("source", "unknown")
@@ -186,7 +186,6 @@ def synthesize_analyses(state: State):
 
     retrieved_context = "\n".join(retrieved_blocks)
 
-    # Ask the LLM to synthesize everything including retrieved context
     messages = get_synthesis_messages(
         user_question,
         google_analysis,
@@ -203,6 +202,7 @@ def synthesize_analyses(state: State):
         "messages": [{"role": "assistant", "content": final_answer}],
     }
 
+# Graph Definition
 graph_builder = StateGraph(State)
 
 graph_builder.add_node("google_search", google_search)
@@ -240,51 +240,14 @@ def run_agent_question(user_input: str) -> dict:
     state = {
         "messages": [{"role": "user", "content": user_input}],
         "user_question": user_input,
-        "google_results": None,
-        "bing_results": None,
-        "reddit_results": None,
-        "selected_reddit_urls": None,
-        "reddit_post_data": None,
-        "google_analysis": None,
-        "bing_analysis": None,
-        "reddit_analysis": None,
-        "final_answer": None,
     }
     final_state = graph.invoke(state)
     return final_state
 
-def run_chatbot():
-    print("Multi-Source Research Agent")
-    print("Type 'exit' to quit\n")
-
-    while True:
-        user_input = input("Ask me anything: ")
-        if user_input.lower() == "exit":
-            print("Bye")
-            break
-
-        state = {
-            "messages": [{"role": "user", "content": user_input}],
-            "user_question": user_input,
-            "google_results": None,
-            "bing_results": None,
-            "reddit_results": None,
-            "selected_reddit_urls": None,
-            "reddit_post_data": None,
-            "google_analysis": None,
-            "bing_analysis": None,
-            "reddit_analysis": None,
-            "final_answer": None,
-        }
-
-        print("\nStarting parallel research process...")
-        print("Launching Google, Bing, and Reddit searches...\n")
-        final_state = graph.invoke(state)
-
-        if final_state.get("final_answer"):
-            print(f"\nFinal Answer:\n{final_state.get('final_answer')}\n")
-
-        print("-" * 80)
-
 if __name__ == "__main__":
-    run_chatbot()
+    print("Multi-Source Research Agent (Fixed)")
+    while True:
+        q = input("Ask: ")
+        if q.lower() == "exit": break
+        res = run_agent_question(q)
+        print(res.get("final_answer"))
