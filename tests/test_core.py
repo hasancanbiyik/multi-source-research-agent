@@ -4,10 +4,7 @@ These tests validate graph structure, data models, and formatting logic
 WITHOUT requiring API keys or external service calls.
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
-from pydantic import ValidationError
-
+from unittest.mock import patch
 
 # ---------------------------------------------------------------------------
 # 1. Pydantic model tests
