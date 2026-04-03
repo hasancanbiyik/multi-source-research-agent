@@ -248,6 +248,7 @@ if __name__ == "__main__":
     print("Multi-Source Research Agent (Fixed)")
     while True:
         q = input("Ask: ")
-        if q.lower() == "exit": break
+        if q.lower() == "exit":
+            break
         res = run_agent_question(q)
         print(res.get("final_answer"))
